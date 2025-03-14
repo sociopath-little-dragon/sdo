@@ -1,0 +1,26 @@
+# Папки IDE
+.idea/
+.vscode/
+__pycache__/
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# Файлы Python
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# Логи и временные файлы
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Файлы настроек
+.env
+.secrets
