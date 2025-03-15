@@ -8,6 +8,7 @@ class TaskInfo(BaseModel):
     id: int
     name: str
     description: str
+    count_subtasks: int
     status: str
     solutions: list[SolutionInfo]
 

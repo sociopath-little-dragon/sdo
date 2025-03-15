@@ -20,9 +20,11 @@ async def get_subjects(authorization: str = Header(...)) -> JSONResponse:
 
     user_subjects = get_user_subjects(check_data['username'])
 
+    serialized_subjects = [subject.model_dump() for subject in user_subjects]
+
     return JSONResponse(
         status_code=HTTPStatus.OK,
-        content=user_subjects.model_dump()
+        content=serialized_subjects
     )
 
 # return tasks of subject by subject_id
@@ -43,7 +45,9 @@ async def get_tasks(subject_identifier: str, authorization: str = Header(...)) -
 
     subject_tasks = get_tasks_by_subject(subject_identifier)
 
+    serialized_tasks = [task.model_dump() for task in subject_tasks]
+
     return JSONResponse(
         status_code=HTTPStatus.OK,
-        content=subject_tasks.model_dump()
+        content=serialized_tasks
     )

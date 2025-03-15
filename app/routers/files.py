@@ -133,7 +133,7 @@ async def test_solution(task_id: int, authorization: str = Header(...)):
 
 # Получение информации о задаче по task_id и информация о том, сдал ли пользователь
 # хотя бы одно правильное решение
-@router.get("/task/{task_id}", response_model=Union[Error, TaskInfo],
+@router.get("/task/{task_id}", response_model=Union[TaskInfo, Error],
             summary="Получение информации о лабораторной работе и всех ее загруженных решениях")
 async def get_task_info(task_id: int, authorization: str = Header(...)):
     check_data = check_auth(authorization)
@@ -168,6 +168,7 @@ async def get_task_info(task_id: int, authorization: str = Header(...)):
             id=task_data['id'],
             name=task_data['name'],
             description=task_data['description'],
+            count_subtasks=1,
             status=status,
             solutions=solutions_info,
         ).model_dump()
