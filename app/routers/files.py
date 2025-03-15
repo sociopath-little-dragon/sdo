@@ -161,7 +161,7 @@ async def get_task_info(task_id: int, authorization: str = Header(...)):
     status = "Success" if passed_solutions else "Failed"
 
     # Формирование ответа
-    solutions_info = [SolutionInfo(code=sol.code, status=sol.status) for sol in user_solutions]
+    solutions_info = [SolutionInfo(code=sol.code, status=sol.status or "unknown").model_dump() for sol in user_solutions]
     return JSONResponse(
         status_code=HTTPStatus.OK,
         content=TaskInfo(

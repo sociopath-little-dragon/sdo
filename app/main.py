@@ -1,6 +1,6 @@
 # sdo project
 from uvicorn import run
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from app.config.config import init_config
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import router as app_router
@@ -15,7 +15,6 @@ app.add_middleware(
     allow_headers=["*"],  # Разрешить все заголовки
 )
 
-
 def main():
     app.include_router(app_router)  # include all routers
 
@@ -25,3 +24,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# система очередей для тестирования
+# изменение бд
+# добавление лаб студентов для преподов, добавление тестов

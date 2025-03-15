@@ -22,7 +22,7 @@ async def get_subjects(authorization: str = Header(...)) -> JSONResponse:
 
     return JSONResponse(
         status_code=HTTPStatus.OK,
-        content=user_subjects
+        content=user_subjects.model_dump()
     )
 
 # return tasks of subject by subject_id
@@ -45,5 +45,5 @@ async def get_tasks(subject_identifier: str, authorization: str = Header(...)) -
 
     return JSONResponse(
         status_code=HTTPStatus.OK,
-        content=subject_tasks
+        content=subject_tasks.model_dump()
     )

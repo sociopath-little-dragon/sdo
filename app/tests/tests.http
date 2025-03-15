@@ -1,12 +1,21 @@
+@host = 147.45.232.120:8000
+@token = Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTc0MzUxNTUxN30.ttfnxUpXSzZvVBo3XKnNMilmxtcresFhhWjaqHB1bik
+
 ###
 # Получение данных пользователя
-GET http://localhost:8000/user_data
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTczNjM2NjQ2Nn0.o1BvD-M4xecd86Ox-3bPDuKPZWpYHI4T0qVETK_sjk8
+GET http://{{host}}/user_data
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+# Получение статуса пользователя
+GET http://{{host}}/user_status
+Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Регистрация пользователя
-POST http://localhost:8000/register
+POST http://{{host}}/register
 Content-Type: application/json
 
 {
@@ -17,7 +26,7 @@ Content-Type: application/json
 
 ###
 # Логирование пользователя
-POST http://localhost:8000/login
+POST http://{{host}}/login
 Content-Type: application/json
 
 {
@@ -27,20 +36,20 @@ Content-Type: application/json
 
 ###
 # Получение предметов пользователя
-GET http://localhost:8000/subjects
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTczNjM2NjQ2Nn0.o1BvD-M4xecd86Ox-3bPDuKPZWpYHI4T0qVETK_sjk8
+GET http://{{host}}/subjects
+Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение тасков с subject_id=1
-GET http://localhost:8000/tasks/1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTczNjM2NjQ2Nn0.o1BvD-M4xecd86Ox-3bPDuKPZWpYHI4T0qVETK_sjk8
+GET http://{{host}}/tasks/1
+Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Загрузка решения задачи в Task с ID 1
-POST http://localhost:8000/upload/1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTczNjM2NjQ2Nn0.o1BvD-M4xecd86Ox-3bPDuKPZWpYHI4T0qVETK_sjk8
+POST http://{{host}}/upload/1
+Authorization: {{token}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
@@ -61,12 +70,12 @@ print(b1, b2)  # Выводим результаты
 
 ###
 # Тестирование последнего загруженного решения задачи с Task ID 1
-POST http://localhost:8000/test/1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTczNjM2NjQ2Nn0.o1BvD-M4xecd86Ox-3bPDuKPZWpYHI4T0qVETK_sjk8
+POST http://{{host}}/test/1
+Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение информации о задаче с Task ID 1 и статусе решений пользователя
-GET http://localhost:8000/task/1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTczNjM2NjQ2Nn0.o1BvD-M4xecd86Ox-3bPDuKPZWpYHI4T0qVETK_sjk8
+GET http://{{host}}/task/1
+Authorization: {{token}}
 Content-Type: application/json

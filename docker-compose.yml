@@ -17,9 +17,9 @@ services:
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
-      POSTGRES_DB: sdo
+      POSTGRES_DB: postgres
     ports:
-      - "5432:5432"
+      - "5050:5432"
     volumes:
       - ./app/init-scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
