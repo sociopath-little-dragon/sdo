@@ -1,4 +1,4 @@
-@host = 147.45.232.120:8000
+@host = localhost:8000
 @token = Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTc0MzUxNTUxN30.ttfnxUpXSzZvVBo3XKnNMilmxtcresFhhWjaqHB1bik
 
 ###
@@ -77,5 +77,39 @@ Content-Type: application/json
 ###
 # Получение информации о задаче с Task ID 1 и статусе решений пользователя
 GET http://{{host}}/task/1
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+GET http://{{host}}/docs
+Content-Type: text/html
+
+### Teacher
+# Получение списка студентов факультета
+GET http://{{host}}/api/teachers/students
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+# Получение списка студентов по группе
+GET http://{{host}}/api/teachers/groups/CS-101/students
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+# Получение списка лабораторных работ студента
+GET http://{{host}}/api/teachers/students/1/labs
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+# Получение информации о конкретной лабораторной работе студента
+GET http://{{host}}/api/teachers/students/1/labs/5
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+# Получение списка групп факультета
+GET http://{{host}}/api/teachers/groups
 Authorization: {{token}}
 Content-Type: application/json
