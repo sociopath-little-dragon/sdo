@@ -1,16 +1,16 @@
-from typing import Union
+from typing import Union, Type
 
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean, Float
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean, Float, func, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, InstrumentedAttribute
 from sqlalchemy.dialects.postgresql import ENUM
 
 from app.config.config import init_config
 from app.schemas.auth import RegisterRequest
-from app.schemas.subject import SubjectInfo
-from app.schemas.users import User as UserSchema
-from app.schemas.task import Task as TaskSchema
+from app.schemas.subject import SubjectInfo, LabStatus
+from app.schemas.users import User as UserSchema, UserInfo
+from app.schemas.task import Task as TaskSchema, Task, TaskInfo, SolutionInfo
 import logging
 
 logging.basicConfig(level=logging.CRITICAL)  # Глобально отключить все логи, кроме критических
@@ -24,7 +24,7 @@ engine = create_engine(DATABASE_URL, echo=False)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
-RoleTypeEnum = ENUM('admin', 'teacher', 'student', name='role_type', create_type=True)
+RoleTypeEnum = ENUM('admin', 'teacher', 'student', name='role', create_type=True)
 
 association_table = Table(
     'UserHasSubject',
@@ -34,37 +34,62 @@ association_table = Table(
 )
 
 
+################################################################################################################
+
+class Faculty(Base):
+    __tablename__ = 'Faculty'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True, nullable=False)
+
+    # Relationships
+    groups = relationship('Group', back_populates='faculty_rel')
+
+
+class Group(Base):
+    __tablename__ = 'Group'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), unique=True, nullable=False)
+    faculty = Column(Integer, ForeignKey('Faculty.id'))
+
+    # Relationships
+    faculty_rel = relationship('Faculty', back_populates='groups')
+    users = relationship('User', back_populates='group_rel')
+
+
 class User(Base):
     __tablename__ = 'User'
 
-    # Fields
     id = Column(Integer, primary_key=True)
-    first_name = Column(String(64), nullable=False)
-    last_name = Column(String(64), nullable=False)
-    middle_name = Column(String(64), nullable=True)
     username = Column(String(64), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    roleType = Column(RoleTypeEnum, nullable=False, default='student')
-    studyGroup = Column(String(32), nullable=False)
+    roleType = Column(String(10), nullable=False, default='student')
+    studyGroup = Column(Integer, ForeignKey('Group.id'))
     form_education = Column(String(255), nullable=False, default='Не указано')
-    faculty = Column(String(255), nullable=False, default='Не указано')
+    first_name = Column(String(64), nullable=False, default='Не указано')
+    last_name = Column(String(64), nullable=False, default='Не указано')
+    middle_name = Column(String(64), default='Не указано')
 
     # Relationships
+    group_rel = relationship('Group', back_populates='users')
     solutions = relationship('Solution', back_populates='user', cascade="all, delete-orphan")
-    subjects = relationship('Subject', secondary=association_table, back_populates='users')
+    subjects = relationship('Subject', secondary=association_table, back_populates='users')  # Исправлено
     subject_grades = relationship("UserSubjectGrade", order_by="UserSubjectGrade.id", back_populates="user")
+
+
+#################################################################################################################
 
 
 class Subject(Base):
     __tablename__ = 'Subject'
 
-    # Fields
     id = Column(Integer, primary_key=True)
     name = Column(String(64), unique=True, nullable=False)
 
     # Relationships
     tasks = relationship('Task', back_populates='subject')
-    users = relationship('User', secondary=association_table, back_populates='subjects')
+    users = relationship('User', secondary=association_table, back_populates='subjects')  # Исправлено
     user_grades = relationship("UserSubjectGrade", order_by="UserSubjectGrade.id", back_populates="subject")
 
 
@@ -159,6 +184,234 @@ class TestResult(Base):
     solution = relationship('Solution', back_populates='testResults')
 
 
+#############################################################################################
+
+def get_faculty_name(faculty_id):
+    with Session() as session:
+        faculty = session.query(Faculty).filter_by(id=faculty_id).first()
+        if faculty:
+            return faculty.name
+        return None
+
+
+def get_group_name(group_id):
+    with Session() as session:
+        group = session.query(Group).filter_by(id=group_id).first()
+        if group:
+            return group.name
+        return None
+
+
+def get_group_id(group_name: str) -> InstrumentedAttribute | None:
+    with Session() as session:
+        group = session.query(Group).filter_by(name=group_name).first()
+        if group:
+            return group.id
+        return None
+
+
+def get_faculty_by_group(group_id):
+    with Session() as session:
+        try:
+            if isinstance(group_id, int):
+                group = session.query(Group).filter_by(id=group_id).first()
+            else:
+                group = session.query(Group).filter_by(name=group_id).first()
+
+            if not group:
+                raise ValueError(f"Group '{group_id}' not found.")
+
+            faculty = session.query(Faculty).filter_by(id=group.Faculty_id).first()
+            return faculty
+
+        except Exception as e:
+            session.rollback()
+
+
+def get_groups_by_faculty(faculty_id: int) -> list[Type[Group]] | str:
+    with Session() as session:
+        groups = session.query(Group).filter_by(faculty=faculty_id).all()
+
+        if not groups:
+            return f"No groups found for faculty with ID {faculty_id}."
+
+        return groups
+
+
+def get_users_by_group(group_id) -> list[UserInfo] | str:
+    with Session() as session:
+        users = session.query(User).filter_by(studyGroup=group_id).all()
+
+        if not users:
+            return f"No users found for group with ID {group_id}."
+
+        users_info: list[UserInfo] = []
+        for user in users:
+            user_info = UserInfo(
+                id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                middle_name=user.middle_name,
+                studyGroup=user.group_rel.name,
+            )
+            users_info.append(user_info)
+
+        return users_info
+
+
+def get_student_labs_by_subject(student_id: int, subject_id: int) -> list[LabStatus]:
+    """
+    Получает список лабораторных работ студента по предмету с их статусами.
+
+    :param student_id: ID студента.
+    :param subject_id: ID предмета.
+    :return: Список объектов LabStatus с информацией о заданиях и их статусах.
+    """
+    with Session() as session:
+        # Основной запрос
+        labs_status = (
+            session.query(
+                Task.id.label("task_id"),
+                Task.name.label("task_name"),
+                func.coalesce(
+                    func.max(
+                        case(
+                            (Solution.status == "Success", "Сдано"),
+                            (Solution.status == "Failed", "Провалено"),
+                            else_="Не выполнено"
+                        )
+                    ), "Не выполнено"
+                ).label("status")
+            )
+            .outerjoin(
+                Solution,
+                (Task.id == Solution.Task_id) & (Solution.User_id == student_id)
+            )
+            .filter(Task.Subject_id == subject_id)
+            .group_by(Task.id, Task.name)
+            .all()
+        )
+
+        result = [
+            LabStatus(
+                id=row.task_id,
+                title=row.task_name,
+                status=row.status
+            )
+            for row in labs_status
+        ]
+
+        return result
+
+
+def get_student_labs(student_id: int, lab_id: int) -> TaskInfo | str:
+    """
+    Получает детальную информацию о лабораторной работе студента, включая статус и все его решения.
+
+    :param student_id: ID студента.
+    :param lab_id: ID лабораторной работы (Task).
+    :return: Объект LabDetailResponse с информацией о задании и решениях.
+    """
+    with Session() as session:
+        # Проверяем существование задания
+        task = session.query(Task).filter_by(id=lab_id).first()
+        if not task:
+            return f"Лабораторная работа с ID {lab_id} не найдена"
+
+        # Получаем статус задания для студента
+        status_query = (
+            session.query(
+                func.coalesce(
+                    func.max(
+                        case(
+                            (Solution.status == "Success", "Сдано"),
+                            (Solution.status == "Failed", "Провалено"),
+                            else_="Не выполнено"
+                        )
+                    ), "Не выполнено"
+                ).label("status")
+            )
+            .filter(Solution.User_id == student_id)
+            .filter(Solution.Task_id == lab_id)
+        ).scalar()
+
+        # Получаем все решения студента для этого задания
+        solutions = (
+            session.query(Solution)
+            .filter(Solution.User_id == student_id)
+            .filter(Solution.Task_id == lab_id)
+            .all()
+        )
+
+        if not solutions:
+            return f"No solutions found for student with ID {student_id} and task with ID {lab_id}."
+        print([(solution.code, solution.status) for solution in solutions])
+        # Формируем список решений
+        solutions_list = [
+            SolutionInfo(
+                code=solution.code,
+                status=solution.status if solution.status else "Не выполнено",
+            )
+            for solution in solutions
+        ]
+
+        # Формируем ответ
+        response = TaskInfo(
+            id=task.id,
+            name=task.name,
+            description=task.description,
+            count_subtasks=1,
+            status=status_query,
+            solutions=solutions_list
+        )
+
+        return response
+
+
+def get_users_by_faculty(faculty_id: int) -> Union[list[UserInfo], str]:
+    """
+    Получает список студентов, связанных с факультетом через их группы.
+
+    :param faculty_id: ID факультета.
+    :return: Список объектов UserInfo или сообщение об ошибке, если студентов нет.
+    """
+    with Session() as session:
+        groups = get_groups_by_faculty(faculty_id)
+
+        if not groups:
+            return f"No groups found for faculty with ID {faculty_id}."
+
+        users = []
+        for group in groups:
+            group_users = session.query(User).filter_by(studyGroup=group.id).all()
+            for user in group_users:
+                user_info = UserInfo(
+                    id=user.id,
+                    username=user.username,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    middle_name=user.middle_name,
+                    studyGroup=user.group_rel.name,
+                )
+                users.append(user_info)
+
+        if not users:
+            return f"No users found for faculty with ID {faculty_id}."
+
+        return users
+
+
+def get_username_by_id(student_id: int) -> Union[str, None]:
+    with Session() as session:
+        user = session.query(User).filter_by(id=student_id).first()
+        if user:
+            return user.username
+        return None
+
+
+########################################################################################
+
 def add_user_subject_grade(user_id, subject_id, grade):
     """
     Добавляет оценку пользователя за предмет.
@@ -209,18 +462,18 @@ def validate_user(username: str, password: str) -> Union[dict, bool]:
             return {
                 "user_id": user.id,
                 "username": user.username,
-                "roletype": user.roleType,
-                "studygroup": user.studyGroup
+                "roleType": user.roleType,
+                "studyGroup": user.studyGroup
             }
         return False
 
 
 def get_user_data(username: str) -> UserSchema:
     """
-    Retrieves all information of a user by username.
+    Получает всю информацию о пользователе по его имени пользователя.
 
-    :param username: The username of the user.
-    :return: A dictionary with user information if the user exists, None otherwise.
+    :param username: Имя пользователя.
+    :return: Объект UserSchema с информацией о пользователе, если он существует, иначе пустой UserSchema.
     """
     with Session() as session:
         user = session.query(User).filter_by(username=username).first()
@@ -233,12 +486,11 @@ def get_user_data(username: str) -> UserSchema:
                 middle_name=user.middle_name,
                 password=user.password,
                 roleType=user.roleType,
-                studyGroup=user.studyGroup,
+                studyGroup=user.group_rel.name,
+                faculty=user.group_rel.faculty_rel.name,
                 form_education=user.form_education,
-                faculty=user.faculty
             )
-
-        return UserSchema()
+        return UserSchema()  # Предполагается, что UserSchema имеет значения по умолчанию
 
 
 def add_user(register_data: RegisterRequest) -> Union[dict, str]:
@@ -248,44 +500,46 @@ def add_user(register_data: RegisterRequest) -> Union[dict, str]:
     :param register_data: The data of the user to be added.
     :param username: The username of the user.
     :param password: The password of the user.
-    :param studygroup: The study group of the user.
+    :param Group_id: The study group of the user.
     :return: A dictionary with user information if the user is added successfully, or an error message.
     """
+    group_id = get_group_id(register_data.group_name)
+    if not group_id:
+        return "Group not found"
+
     new_user = User(
         first_name="Иван",
         last_name="Иванов",
         middle_name="Иванович",
         username=register_data.username,
         password=register_data.password,
-        roleType='student',  # Default role type
-        studyGroup=register_data.group_name,
+        roleType='student',
         form_education='Бюджет',
-        faculty='Информационные системы и технологии'  # Default faculty
+        studyGroup=group_id,
     )
+
     with Session() as session:
         try:
             session.add(new_user)
             session.commit()
             return {
                 "username": new_user.username,
-                "roletype": new_user.roleType,
-                "studygroup": new_user.studyGroup,
+                "roleType": new_user.roleType,
                 "form_education": new_user.form_education,
-                "faculty": new_user.faculty
+                "studyGroup": new_user.studyGroup
             }
         except IntegrityError:
             session.rollback()
             return "User not added"
 
 
-def add_user_test(username, password, role_type='student', study_group='-', form_education='-', faculty='-',
+def add_user_test(username, password, role_type='student', study_group='', form_education='-',
                   first_name='Иван', last_name='Иванов', middle_name='Иванович'):
     """
     Добавляет нового пользователя в базу данных.
     :param first_name:
     :param last_name:
     :param middle_name:
-    :param faculty:
     :param form_education:
     :param username: Имя пользователя (уникальное)
     :param password: Пароль пользователя
@@ -313,9 +567,8 @@ def add_user_test(username, password, role_type='student', study_group='-', form
                 username=username,
                 password=password,
                 roleType=role_type,
-                studyGroup=study_group,
                 form_education=form_education,
-                faculty=faculty
+                Group_id=study_group
             )
             session.add(new_user)
             session.commit()
@@ -623,60 +876,55 @@ def get_task_data(task_id: int) -> dict | None:
         return None
 
 
-def get_tasks_by_subject(subject_identifier: str) -> list[TaskSchema]:
+def get_tasks_by_subject(subject_id: int) -> str | list[Task]:
     """
     Получает все задачи, связанные с предметом по его ID.
 
-    :param subject_identifier: ID или имя предмета
+    :param subject_id: ID или имя предмета
     :return: Список задач, связанных с предметом
     :raises ValueError: Если предмет с таким идентификатором или именем не найден
     """
     with Session() as session:
         try:
-            subject = session.query(Subject).filter_by(id=int(subject_identifier)).first()
+            subject = session.query(Subject).filter_by(id=subject_id).first()
 
             if not subject:
-                return list[TaskSchema]()
+                return "Subject not found"
 
-            # Получаем задачи, связанные с найденным предметом
             tasks = session.query(Task).filter_by(Subject_id=subject.id).all()
 
-            # Если задачи не найдены, возвращаем пустой список
             if not tasks:
-                return list[TaskSchema]()
+                return "No tasks found for subject"
 
             return [TaskSchema(id=task.id, name=task.name, description=task.description) for task in tasks]
 
         except Exception as e:
-            return list[TaskSchema]()
+            return str(e)
 
 
-def is_user_enrolled_in_subject(username: str, subject_identifier: str) -> bool | str:
+def is_user_enrolled_in_subject(username: str, subject_id: int) -> bool | str:
     """
     Проверяет, зачислен ли пользователь на предмет по его ID.
 
     :param username:
-    :param subject_identifier: ID или имя предмета
+    :param subject_id: ID или имя предмета
     :return: True, если пользователь зачислен на предмет, иначе False
     """
     with Session() as session:
         try:
-            # Проверяем, существует ли пользователь с таким username
             user = session.query(User).filter_by(username=username).first()
             if not user:
                 return "User not found"
 
-            user_subject_list = [str(sub.id) for sub in user.subjects]
+            user_subject_list = [sub.id for sub in user.subjects]
 
             if len(user_subject_list) == 0:
                 return "No subjects found"
 
-            # Проверяем, зачислен ли пользователь на этот предмет
-            return subject_identifier in user_subject_list
+            return subject_id in user_subject_list
 
         except Exception as e:
-            print(f"Error checking enrollment for user {username} in subject {subject_identifier}: {e}")
-            return "Error"
+            return f"Error checking enrollment for user {username} in subject {subject_id}: {e}"
 
 
 def add_test_case(input_data, output_data, task_id):
@@ -746,7 +994,7 @@ def get_test_cases_by_task(task_id):
 def get_user_testCase_results_by_solution(user_id, solution_id):
     """
     Возвращает результаты тестов пользователя для указанного решения.
-    
+
     :param user_id: ID пользователя
     :param solution_id: ID задачи
     :return: Список результатов тестов для каждого теста, связанного с решением пользователя
@@ -828,23 +1076,6 @@ def add_test_result(passed, test_case_id, solution_id):
             # В случае ошибки откатываем изменения и выводим информацию об ошибке
             session.rollback()
             print(f"Error adding test result: {e}")
-            raise
-
-
-def get_users_by_group(study_group):
-    """
-    Получает всех пользователей, которые принадлежат указанной учебной группе.
-
-    :param study_group: Название учебной группы
-    :return: Список пользователей (объекты класса User)
-    """
-    with Session() as session:
-        try:
-            # Получаем всех пользователей, принадлежащих к указанной учебной группе
-            users = session.query(User).filter_by(studyGroup=study_group).all()
-            return users  # Возвращаем список пользователей
-        except Exception as e:
-            print(f"Error retrieving users for study group {study_group}: {e}")
             raise
 
 

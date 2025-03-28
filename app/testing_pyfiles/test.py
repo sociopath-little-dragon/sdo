@@ -127,6 +127,15 @@ async def check_formulas(teacher_formula_str, input_variables_str, code_str) -> 
 
 async def run_tests(task_id: int, code_str: str) -> dict:
     test_cases = get_test_cases_by_task(task_id)
+    if not test_cases:
+        return {
+            "test_case_number": -1,
+            "input_data": "No test cases found.",
+            "user_output": "",
+            "expected_output": "",
+            "status": "Failed"
+        }
+
     total_execution_time = 0
     code_length = sum(1 for line in code_str.split('\n') if line.strip())
 

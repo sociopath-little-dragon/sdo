@@ -53,20 +53,20 @@ async def register(request: RegisterRequest):
     if isinstance(res_data, str):
         return JSONResponse(
             status_code=HTTPStatus.BAD_REQUEST,
-            content={"error": "User not added."}
+            content={"error": res_data}
         )
 
     jwt_data = {
         "username": res_data.get('username'),
-        "roletype": res_data.get('roletype'),
-        "studygroup": res_data.get('studygroup')
+        "roleType": res_data.get('roleType'),
+        "studyGroup": res_data.get('studyGroup')
     }
 
     # generate jwt token & more
     user_token = create_access_token(jwt_data, timedelta(seconds=cfg['expires_in']))
     register_response = RegisterResponse(
         access_token=user_token,
-        role=res_data.get('roletype', 'default_role'),
+        role=res_data.get('roleType', 'unknown'),
     )
     return JSONResponse(
         status_code=HTTPStatus.OK,

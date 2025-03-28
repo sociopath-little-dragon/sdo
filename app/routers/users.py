@@ -17,7 +17,7 @@ def get_user_status(authorization: str = Header(...)) -> JSONResponse:
     return JSONResponse(
         status_code=HTTPStatus.OK,
         content=UserStatus(
-            status=check_data['roletype'],
+            status=check_data['roleType'],
         ).model_dump()
     )
 

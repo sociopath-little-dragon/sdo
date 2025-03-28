@@ -4,9 +4,24 @@ DROP TABLE IF EXISTS "TestCase" CASCADE;
 DROP TABLE IF EXISTS "Solution" CASCADE;
 DROP TABLE IF EXISTS "Task" CASCADE;
 DROP TABLE IF EXISTS "UserHasSubject" CASCADE;
+DROP TABLE IF EXISTS "Faculty" CASCADE;
+DROP TABLE IF EXISTS "Group" CASCADE;
 DROP TABLE IF EXISTS "User" CASCADE;
 DROP TABLE IF EXISTS "Subject" CASCADE;
 DROP TABLE IF EXISTS "user_subject_grades" CASCADE;
+
+CREATE TABLE "Faculty"
+(
+    id   SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE "Group"
+(
+    id      SERIAL PRIMARY KEY,
+    name    VARCHAR(32) UNIQUE NOT NULL,
+    faculty INTEGER REFERENCES "Faculty" (id)
+);
 
 -- Создание таблиц
 CREATE TABLE "User"
@@ -14,13 +29,12 @@ CREATE TABLE "User"
     id             SERIAL PRIMARY KEY,
     username       VARCHAR(64) UNIQUE NOT NULL,
     password       VARCHAR(255)       NOT NULL,
-    "roleType"       VARCHAR(10)        NOT NULL DEFAULT 'student',
-    "studyGroup"     VARCHAR(32),
+    "roleType"         VARCHAR(10)        NOT NULL DEFAULT 'student',
+    "studyGroup"        INTEGER REFERENCES "Group" (id),
     form_education VARCHAR(255)       NOT NULL DEFAULT 'Не указано',
-    faculty        VARCHAR(255)       NOT NULL DEFAULT 'Не указано',
-    first_name     VARCHAR(64)        NOT NULL,
-    last_name      VARCHAR(64)        NOT NULL,
-    middle_name    VARCHAR(64)
+    first_name     VARCHAR(64)        NOT NULL DEFAULT 'Не указано',
+    last_name      VARCHAR(64)        NOT NULL DEFAULT 'Не указано',
+    middle_name    VARCHAR(64)                 DEFAULT 'Не указано'
 );
 
 CREATE TABLE "Subject"
@@ -31,28 +45,28 @@ CREATE TABLE "Subject"
 
 CREATE TABLE "Task"
 (
-    id              SERIAL PRIMARY KEY,
-    name            VARCHAR(128) UNIQUE NOT NULL,
-    description     VARCHAR(2048),
+    id                SERIAL PRIMARY KEY,
+    name              VARCHAR(128) UNIQUE NOT NULL,
+    description       VARCHAR(2048),
     "maxSymbolsCount" INTEGER,
     "maxStringsCount" INTEGER,
-    construction    VARCHAR(128),
-    teacher_formula VARCHAR,
-    input_variables VARCHAR,
-    "Subject_id"    INTEGER             NOT NULL REFERENCES "Subject" (id)
+    construction      VARCHAR(128),
+    teacher_formula   VARCHAR,
+    input_variables   VARCHAR,
+    "Subject_id"      INTEGER             NOT NULL REFERENCES "Subject" (id)
 );
 
 CREATE TABLE "Solution"
 (
-    id                SERIAL PRIMARY KEY,
-    code              TEXT    NOT NULL,
-    mark              INTEGER,
+    id                  SERIAL PRIMARY KEY,
+    code                TEXT    NOT NULL,
+    mark                INTEGER,
     "lengthTestResult"  BOOLEAN,
     "formulaTestResult" BOOLEAN,
     "autoTestResult"    INTEGER,
-    status            VARCHAR,
-    "User_id"         INTEGER NOT NULL REFERENCES "User" (id),
-    "Task_id"         INTEGER REFERENCES "Task" (id)
+    status              VARCHAR,
+    "User_id"           INTEGER NOT NULL REFERENCES "User" (id),
+    "Task_id"           INTEGER REFERENCES "Task" (id)
 );
 
 CREATE TABLE "TestCase"
@@ -86,11 +100,23 @@ CREATE TABLE "user_subject_grades"
     grade      FLOAT
 );
 
+INSERT INTO "Faculty" (name)
+VALUES ('Информационные системы и технологии'),
+       ('Вычислительная техника и программное обеспечение');
+
+INSERT INTO "Group" (name, faculty)
+VALUES ('211-365', 1),
+       ('211-366', 1),
+       ('211-367', 2),
+       ('211-368', 2);
+
 -- Добавление пользователей
-INSERT INTO "User" (username, password, "roleType", "studyGroup", form_education, faculty, first_name, last_name, middle_name)
-VALUES ('admin', 'adminPass', 'admin', 'АдминГруппа', 'Бюджет', 'Информационные системы и технологии', 'Admin', 'User', NULL),
-       ('teacher1', 'teacherPass', 'teacher', 'УчительГруппа', 'Бюджет', 'Информационные системы и технологии', 'Иван', 'Калмыков', 'Денисович'),
-       ('student', 'student', 'student', '211-365', 'Платная', 'Вычислительная техника и программное обеспечение', 'Петров', 'Антон', 'Данилович');
+INSERT INTO "User" (username, password, "roleType", "studyGroup", form_education, first_name, last_name,
+                    middle_name)
+VALUES ('teacher', 'teacher', 'teacher', NULL, '', 'Иван',
+        'Калмыков', 'Денисович'),
+       ('student', 'student', 'student', 1, 'Платная',
+        'Петров', 'Антон', 'Данилович');
 
 -- Добавление дисциплин
 INSERT INTO "Subject" (name)
@@ -101,13 +127,14 @@ VALUES ('Python'),
 
 -- Привязка пользователя к дисциплине
 INSERT INTO "UserHasSubject" (user_id, subject_id)
-VALUES (2, 1),
-       (2, 2),
-       (3, 1),
-       (3, 4);
+VALUES (1, 1),
+       (1, 2),
+       (2, 1),
+       (2, 4);
 
 -- Добавление заданий
-INSERT INTO "Task" (name, "Subject_id", description, "maxSymbolsCount", "maxStringsCount", teacher_formula, input_variables)
+INSERT INTO "Task" (name, "Subject_id", description, "maxSymbolsCount", "maxStringsCount", teacher_formula,
+                    input_variables)
 VALUES ('Задание 1. Python - числовые типы', 1,
         'Задача на числовые типы\nПример входных данных: 1 2 3\nПример выходных данных: 0 2', 128, 10,
         'b1=a1+a2-a3\nb2=b1+a2', 'a1\na2\na3'),
@@ -152,8 +179,8 @@ VALUES ('1 2 3', '0 2', 1),
 
 -- Добавление решений
 INSERT INTO "Solution" (code, "User_id", "Task_id")
-VALUES ('print(''Hello, World!'')', 3, 1),
-       ('print(''Hello, World!'')', 3, 3);
+VALUES ('print(''Hello, World!'')', 1, 1),
+       ('print(''Hello, World!'')', 1, 3);
 
 -- Добавление результатов тестирования
 INSERT INTO "TestResult" (passed, "TestCase_id", "Solution_id")

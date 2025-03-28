@@ -1,5 +1,5 @@
 @host = localhost:8000
-@token = Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xldHlwZSI6InN0dWRlbnQiLCJzdHVkeWdyb3VwIjoiMjExLTM2NSIsImV4cCI6MTc0MzUxNTUxN30.ttfnxUpXSzZvVBo3XKnNMilmxtcresFhhWjaqHB1bik
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xlVHlwZSI6InN0dWRlbnQiLCJzdHVkeUdyb3VwIjoxLCJleHAiOjE3NDU3NjMzMjN9.vzJLX4JxrhO7TYhaDpvHgu0xb709tTQkHVyqGPFxVXk
 
 ###
 # Получение данных пользователя
@@ -19,9 +19,9 @@ POST http://{{host}}/register
 Content-Type: application/json
 
 {
-    "username": "student",
+    "username": "student1234",
     "password": "student",
-    "group_name": "231-335"
+    "group_name": "211-365"
 }
 
 ###
@@ -65,12 +65,17 @@ b1 = a1 + a2 - a3  # Выполняем расчет для b1
 b2 = b1 + a2  # Выполняем расчет для b2
 
 print(b1, b2)  # Выводим результаты
+sdf
+sdf
+sdf
+sdf
+sdf
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###
 # Тестирование последнего загруженного решения задачи с Task ID 1
-POST http://{{host}}/test/1
+POST http://{{host}}/test/3
 Authorization: {{token}}
 Content-Type: application/json
 
@@ -86,30 +91,30 @@ Content-Type: text/html
 
 ### Teacher
 # Получение списка студентов факультета
-GET http://{{host}}/api/teachers/students
+GET http://{{host}}/api/teachers/students/1
 Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение списка студентов по группе
-GET http://{{host}}/api/teachers/groups/CS-101/students
+GET http://{{host}}/api/teachers/groups/1/students
 Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение списка лабораторных работ студента
-GET http://{{host}}/api/teachers/students/1/labs
+GET http://{{host}}/api/teachers/students/2/subjects/1/labs
 Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение информации о конкретной лабораторной работе студента
-GET http://{{host}}/api/teachers/students/1/labs/5
+GET http://{{host}}/api/teachers/students/1/labs/3/lab
 Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение списка групп факультета
-GET http://{{host}}/api/teachers/groups
+GET http://{{host}}/api/teachers/groups/1
 Authorization: {{token}}
 Content-Type: application/json

@@ -1,30 +1,28 @@
 from pydantic import BaseModel
-from datetime import datetime
+
+from app.schemas.task import SolutionInfo
 
 
 class StudentResponse(BaseModel):
-    id: int
-    full_name: str
-    email: str
-    group: str
-
+    id: int = 0
+    full_name: str = "Не указано"
+    studyGroup: str = "Не указано"
 
 class GroupResponse(BaseModel):
-    group_id: str
-    group_name: str
+    id: int = 0
+    name: str = ""
 
 
 class LabResponse(BaseModel):
-    lab_id: int
-    title: str
-    status: str
-    grade: int
+    id: int = 0
+    title: str = ""
+    status: str = ""
 
 
 class LabDetailResponse(BaseModel):
-    lab_id: int
-    title: str
-    status: str
-    grade: int
-    submission_date: datetime
-    feedback: str
+    id: int = 0
+    name: str = ""
+    description: str = ""
+    count_subtasks: int = 0
+    status: str = ""
+    solutions: list[SolutionInfo] = []

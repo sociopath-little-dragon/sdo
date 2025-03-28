@@ -13,6 +13,7 @@ from app.schemas.others import Error
 from app.schemas.task import TaskInfo, SolutionInfo
 from app.schemas.test import ResponseTest
 from app.testing_pyfiles.test import check_file
+from app.utils.utils import response_with_json
 
 router = APIRouter()
 
@@ -75,7 +76,7 @@ async def test_solution(task_id: int, authorization: str = Header(...)):
             content={"error": "Task not found."}
         )
 
-    user_enrolled = is_user_enrolled_in_subject(check_data['username'], str(subject_id))
+    user_enrolled = is_user_enrolled_in_subject(check_data['username'], subject_id)
     if not user_enrolled:
         return JSONResponse(
             status_code=HTTPStatus.FORBIDDEN,
@@ -107,27 +108,23 @@ async def test_solution(task_id: int, authorization: str = Header(...)):
         latest_solution.id
     )
 
+    response = ResponseTest(
+        status=res_check.execution_status,
+        formulas_output=res_check.formulas_output,
+        code_output=res_check.code_output,
+        execution_time=res_check.execution_time,
+        code_length=res_check.code_length,
+    ).model_dump()
+
     if res_check.execution_status == "Failed":
-        return JSONResponse(
-            status_code=HTTPStatus.BAD_REQUEST,
-            content=ResponseTest(
-                status=res_check.execution_status,
-                formulas_output=res_check.formulas_output,
-                code_output=res_check.code_output,
-                execution_time=res_check.execution_time,
-                code_length=res_check.code_length,
-            ).model_dump()
+        return response_with_json(
+            HTTPStatus.BAD_REQUEST,
+            response
         )
 
-    return JSONResponse(
-        status_code=HTTPStatus.OK,
-        content=ResponseTest(
-            status=res_check.execution_status,
-            formulas_output=res_check.formulas_output,
-            code_output=res_check.code_output,
-            execution_time=res_check.execution_time,
-            code_length=res_check.code_length,
-        ).model_dump()
+    return response_with_json(
+        HTTPStatus.OK,
+        response
     )
 
 
@@ -161,7 +158,8 @@ async def get_task_info(task_id: int, authorization: str = Header(...)):
     status = "Success" if passed_solutions else "Failed"
 
     # Формирование ответа
-    solutions_info = [SolutionInfo(code=sol.code, status=sol.status or "unknown").model_dump() for sol in user_solutions]
+    solutions_info = [SolutionInfo(code=sol.code, status=sol.status or "unknown").model_dump() for sol in
+                      user_solutions]
     return JSONResponse(
         status_code=HTTPStatus.OK,
         content=TaskInfo(
