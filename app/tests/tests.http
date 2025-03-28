@@ -1,5 +1,5 @@
 @host = localhost:8000
-@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xlVHlwZSI6InN0dWRlbnQiLCJzdHVkeUdyb3VwIjoxLCJleHAiOjE3NDU3NjMzMjN9.vzJLX4JxrhO7TYhaDpvHgu0xb709tTQkHVyqGPFxVXk
+@token = Bearer token
 
 ###
 # Получение данных пользователя
