@@ -1,5 +1,5 @@
 @host = localhost:8000
-@token = Bearer token
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xlVHlwZSI6InN0dWRlbnQiLCJzdHVkeUdyb3VwIjoxLCJleHAiOjE3NDYzODAzNjR9.mqQ9U6Duw9GAWsgfhrALEwRsDY2qcLMMOkdxQbUHhAc
 
 ###
 # Получение данных пользователя
@@ -65,23 +65,18 @@ b1 = a1 + a2 - a3  # Выполняем расчет для b1
 b2 = b1 + a2  # Выполняем расчет для b2
 
 print(b1, b2)  # Выводим результаты
-sdf
-sdf
-sdf
-sdf
-sdf
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###
 # Тестирование последнего загруженного решения задачи с Task ID 1
-POST http://{{host}}/test/3
+POST http://{{host}}/test/1
 Authorization: {{token}}
 Content-Type: application/json
 
 ###
 # Получение информации о задаче с Task ID 1 и статусе решений пользователя
-GET http://{{host}}/task/1
+GET http://{{host}}/task/3
 Authorization: {{token}}
 Content-Type: application/json
 

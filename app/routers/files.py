@@ -147,11 +147,11 @@ async def get_task_info(task_id: int, authorization: str = Header(...)):
 
     # Получение решений пользователя для задачи
     user_solutions = get_user_solutions_by_task(check_data['user_id'], task_id)
-    if not user_solutions:
-        return JSONResponse(
-            status_code=HTTPStatus.NOT_FOUND,
-            content=Error(message="No solutions found for this task.").model_dump()
-        )
+    # if not user_solutions:
+    #     return JSONResponse(
+    #         status_code=HTTPStatus.NOT_FOUND,
+    #         content=Error(message="No solutions found for this task.").model_dump()
+    #     )
 
     # Проверка, есть ли хотя бы одно успешное решение
     passed_solutions = [sol for sol in user_solutions if sol.status == "Success"]

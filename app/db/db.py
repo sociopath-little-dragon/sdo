@@ -479,6 +479,14 @@ def get_user_data(username: str) -> UserSchema:
         user = session.query(User).filter_by(username=username).first()
 
         if user:
+            # Проверяем, есть ли группа и факультет
+            study_group_name = user.group_rel.name if user.group_rel else "Не указано"
+            faculty_name = (
+                user.group_rel.faculty_rel.name
+                if user.group_rel and user.group_rel.faculty_rel
+                else "Не указано"
+            )
+
             return UserSchema(
                 username=user.username,
                 first_name=user.first_name,
@@ -486,12 +494,11 @@ def get_user_data(username: str) -> UserSchema:
                 middle_name=user.middle_name,
                 password=user.password,
                 roleType=user.roleType,
-                studyGroup=user.group_rel.name,
-                faculty=user.group_rel.faculty_rel.name,
+                studyGroup=study_group_name,
+                faculty=faculty_name,
                 form_education=user.form_education,
             )
         return UserSchema()  # Предполагается, что UserSchema имеет значения по умолчанию
-
 
 def add_user(register_data: RegisterRequest) -> Union[dict, str]:
     """
