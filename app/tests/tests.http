@@ -1,4 +1,4 @@
-@host = localhost:8000
+@host = 147.45.232.120:8000
 @token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xlVHlwZSI6InN0dWRlbnQiLCJzdHVkeUdyb3VwIjoxLCJleHAiOjE3NDYzODAzNjR9.mqQ9U6Duw9GAWsgfhrALEwRsDY2qcLMMOkdxQbUHhAc
 
 ###
