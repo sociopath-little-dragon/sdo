@@ -26,3 +26,25 @@ class LabDetailResponse(BaseModel):
     count_subtasks: int = 0
     status: str = ""
     solutions: list[SolutionInfo] = []
+
+
+class GroupResponse(BaseModel):
+    id: int
+    name: str = ""
+
+
+class TestCase(BaseModel):
+    input: str
+    output: str
+
+
+class CreateLabRequest(BaseModel):
+    title: str = ""
+    description: str = ""
+    subject_id: int = 0
+    formula: str = ""
+    variables: str = ""
+    test_cases: list[TestCase] = []
+
+
+# class CreateLabResponse(BaseModel):

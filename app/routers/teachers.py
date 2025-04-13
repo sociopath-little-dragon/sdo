@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+import jwt
+from fastapi import APIRouter, Depends, HTTPException, Header
 from fastapi.responses import JSONResponse
 from http import HTTPStatus
 from typing import List
 
+from app.core.jwt_handler import decode_access_token
 from app.db.db import get_users_by_faculty, get_users_by_group, is_user_enrolled_in_subject, get_username_by_id, \
     get_tasks_by_subject, get_student_labs_by_subject, get_task_data, get_user_solutions_by_task, get_student_labs, \
-    get_groups_by_faculty
+    get_groups_by_faculty, get_groups_by_user_id
 from app.schemas.task import TaskInfo
 from app.schemas.teachers import (
     StudentResponse,
     GroupResponse,
     LabResponse,
-    LabDetailResponse
+    LabDetailResponse, CreateLabRequest
 )
 from app.utils.utils import response_with_json, response_with_error
 
@@ -146,3 +148,31 @@ async def get_faculty_groups(faculty_id: int):
         status_code=HTTPStatus.OK,
         content=response
     )
+
+# Получение групп преподавателя
+@router.get("/groups", response_model=list[GroupResponse], summary="Получение групп преподавателя")
+async def get_groups(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"error": "Invalid token format"})
+    token = authorization[len("Bearer "):]
+    decoded_token = decode_access_token(token)
+    if isinstance(decoded_token, str):
+        return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"error": decoded_token})
+
+    user_id = decoded_token.get("user_id")
+    groups = get_groups_by_user_id(user_id)
+
+    resposne = [GroupResponse(
+        id=group[0],
+        name=group[1],
+    ).model_dump(
+    ) for group in groups]
+
+    return JSONResponse(
+        status_code=HTTPStatus.OK,
+        content=resposne
+    )
+
+# Создание лабораторной работы
+# @router.post("/create_lab", response_model=int)
+# async def create_lab(lab: CreateLabRequest):

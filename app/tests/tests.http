@@ -1,5 +1,5 @@
-@host = 147.45.232.120:8000
-@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6InN0dWRlbnQiLCJyb2xlVHlwZSI6InN0dWRlbnQiLCJzdHVkeUdyb3VwIjoxLCJleHAiOjE3NDYzODAzNjR9.mqQ9U6Duw9GAWsgfhrALEwRsDY2qcLMMOkdxQbUHhAc
+@host = localhost:8000
+@token = Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6InRlYWNoZXIiLCJyb2xlVHlwZSI6InRlYWNoZXIiLCJzdHVkeUdyb3VwIjpudWxsLCJleHAiOjE3NDcxNjM3Nzd9.BL9KmKtBCnICp5hTCq_uR_oMxgposx6bPpcxUsKWgKo
 
 ###
 # Получение данных пользователя
@@ -30,8 +30,8 @@ POST http://{{host}}/login
 Content-Type: application/json
 
 {
-    "username": "student",
-    "password": "student"
+    "username": "teacher",
+    "password": "teacher"
 }
 
 ###
@@ -111,5 +111,11 @@ Content-Type: application/json
 ###
 # Получение списка групп факультета
 GET http://{{host}}/api/teachers/groups/1
+Authorization: {{token}}
+Content-Type: application/json
+
+###
+# Получение групп преподавателя
+GET http://{{host}}/api/teachers/groups
 Authorization: {{token}}
 Content-Type: application/json

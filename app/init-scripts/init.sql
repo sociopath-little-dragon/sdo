@@ -10,6 +10,13 @@ DROP TABLE IF EXISTS "User" CASCADE;
 DROP TABLE IF EXISTS "Subject" CASCADE;
 DROP TABLE IF EXISTS "user_subject_grades" CASCADE;
 
+CREATE TABLE "TeacherHasGroups"
+(
+    id      SERIAL PRIMARY KEY,
+    teacher_id INTEGER REFERENCES "User" (id),
+    group_id INTEGER REFERENCES "Group" (id)
+);
+
 CREATE TABLE "Faculty"
 (
     id   SERIAL PRIMARY KEY,
@@ -99,6 +106,11 @@ CREATE TABLE "user_subject_grades"
     subject_id INTEGER NOT NULL REFERENCES "Subject" (id),
     grade      FLOAT
 );
+
+INSERT INTO "TeacherHasGroups" (teacher_id, group_id)
+VALUES
+    (1, 1),
+    (1, 2);
 
 INSERT INTO "Faculty" (name)
 VALUES ('Информационные системы и технологии'),

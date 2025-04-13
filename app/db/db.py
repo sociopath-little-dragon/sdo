@@ -1,4 +1,4 @@
-from typing import Union, Type
+from typing import Union, Type, Any
 
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean, Float, func, case
 from sqlalchemy.exc import IntegrityError
@@ -34,6 +34,21 @@ association_table = Table(
 )
 
 
+####
+
+class TeacherHasGroups(Base):
+    __tablename__ = 'TeacherHasGroups'
+
+    id = Column(Integer, primary_key=True)
+    teacher_id = Column(Integer, ForeignKey('User.id'), nullable=False)
+    group_id = Column(Integer, ForeignKey('Group.id'), nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="teacher_groups", overlaps="teacher")
+    teacher = relationship("User", back_populates="teacher_groups", overlaps="user")
+    group = relationship("Group", back_populates="teacher_groups")
+
+
 ################################################################################################################
 
 class Faculty(Base):
@@ -56,6 +71,7 @@ class Group(Base):
     # Relationships
     faculty_rel = relationship('Faculty', back_populates='groups')
     users = relationship('User', back_populates='group_rel')
+    teacher_groups = relationship('TeacherHasGroups', back_populates='group')
 
 
 class User(Base):
@@ -72,6 +88,7 @@ class User(Base):
     middle_name = Column(String(64), default='Не указано')
 
     # Relationships
+    teacher_groups = relationship("TeacherHasGroups", back_populates="user")
     group_rel = relationship('Group', back_populates='users')
     solutions = relationship('Solution', back_populates='user', cascade="all, delete-orphan")
     subjects = relationship('Subject', secondary=association_table, back_populates='users')  # Исправлено
@@ -236,6 +253,21 @@ def get_groups_by_faculty(faculty_id: int) -> list[Type[Group]] | str:
             return f"No groups found for faculty with ID {faculty_id}."
 
         return groups
+
+
+def get_groups_by_user_id(user_id: int) -> list[tuple[Any, Any]]:
+    with Session() as session:
+        groups = (
+            session.query(Group.name, Group.id)
+            .join(TeacherHasGroups, TeacherHasGroups.group_id == Group.id)
+            .filter(TeacherHasGroups.teacher_id == user_id)
+            .all()
+        )
+        response = []
+        for group in groups:
+            if group.name != "-":
+                response.append((group.id, group.name))
+        return response
 
 
 def get_users_by_group(group_id) -> list[UserInfo] | str:
@@ -499,6 +531,7 @@ def get_user_data(username: str) -> UserSchema:
                 form_education=user.form_education,
             )
         return UserSchema()  # Предполагается, что UserSchema имеет значения по умолчанию
+
 
 def add_user(register_data: RegisterRequest) -> Union[dict, str]:
     """
