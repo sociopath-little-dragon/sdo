@@ -292,6 +292,66 @@ def get_users_by_group(group_id) -> list[UserInfo] | str:
         return users_info
 
 
+def is_task_completed(session: Session, user_id: int, task_id: int) -> bool:
+    """
+    Проверяет, выполнено ли задание студентом.
+
+    Args:
+        session: Сессия SQLAlchemy
+        user_id: ID студента
+        task_id: ID задания
+
+    Returns:
+        True если есть хотя бы одно успешное решение, иначе False
+    """
+    # Проверяем наличие успешных решений (autoTestResult = 1)
+    solution = session.query(Solution) \
+        .filter(
+        Solution.User_id == user_id,
+        Solution.Task_id == task_id,
+        Solution.status == "Success"  # 1 означает успешное выполнение
+    ) \
+        .first()
+
+    return solution is not None
+
+
+def get_student_tasks_with_status(user_id: int) -> list[tuple[int, str, bool]]:
+    """
+    Получает все задания студента по его user_id с информацией о выполнении.
+
+    Args:
+        user_id: ID студента
+
+    Returns:
+        Список кортежей (task_id, task_name, is_completed)
+    """
+    with Session() as session:
+        # Получаем все subject_id, связанные с пользователем
+        student_subjects = session.query(association_table.c.subject_id) \
+            .filter(association_table.c.user_id == user_id) \
+            .all()
+
+        if not student_subjects:
+            return []
+
+        # Извлекаем только subject_id из результатов запроса
+        subject_ids = [subj.subject_id for subj in student_subjects]
+
+        # Получаем все задания, связанные с этими subject_id
+        tasks = session.query(Task) \
+            .filter(Task.Subject_id.in_(subject_ids)) \
+            .order_by(Task.id) \
+            .all()
+
+        # Формируем результат с информацией о выполнении
+        result = []
+        for task in tasks:
+            completed = is_task_completed(session, user_id, task.id)
+            result.append((task.id, task.name, completed))
+
+        return result
+
 def get_student_labs_by_subject(student_id: int, subject_id: int) -> list[LabStatus]:
     """
     Получает список лабораторных работ студента по предмету с их статусами.
@@ -433,6 +493,15 @@ def get_users_by_faculty(faculty_id: int) -> Union[list[UserInfo], str]:
 
         return users
 
+def get_groups() -> list[str]:
+    with Session() as session:
+        groups = session.query(Group).all()
+        result = []
+        for group in groups:
+            if group.name != "-":
+                result.append(group.name)
+
+        return result
 
 def get_username_by_id(student_id: int) -> Union[str, None]:
     with Session() as session:
@@ -547,13 +616,21 @@ def add_user(register_data: RegisterRequest) -> Union[dict, str]:
     if not group_id:
         return "Group not found"
 
+    middle_name = register_data.middle_name
+    if middle_name == "-":
+        middle_name = ""
+
+    role_type = "student"
+    if register_data.group_name == "vasiliy":
+        role_type = "teacher"
+
     new_user = User(
-        first_name="Иван",
-        last_name="Иванов",
-        middle_name="Иванович",
+        first_name=register_data.first_name,
+        last_name=register_data.last_name,
+        middle_name=middle_name,
         username=register_data.username,
         password=register_data.password,
-        roleType='student',
+        roleType=role_type,
         form_education='Бюджет',
         studyGroup=group_id,
     )
@@ -931,7 +1008,7 @@ def get_tasks_by_subject(subject_id: int) -> str | list[Task]:
             if not subject:
                 return "Subject not found"
 
-            tasks = session.query(Task).filter_by(Subject_id=subject.id).all()
+            tasks = session.query(Task).filter_by(Subject_id=subject.id).order_by(Task.id).all()
 
             if not tasks:
                 return "No tasks found for subject"

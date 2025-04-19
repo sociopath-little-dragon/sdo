@@ -4,7 +4,8 @@ from http import HTTPStatus
 
 from app.core.check_auth import check_auth
 
-from app.db.db import get_user_subjects, is_user_enrolled_in_subject, get_tasks_by_subject, get_user_solutions_by_task
+from app.db.db import get_user_subjects, is_user_enrolled_in_subject, get_tasks_by_subject, get_user_solutions_by_task, \
+    get_student_labs, get_student_tasks_with_status
 from app.schemas.others import Error
 from app.schemas.subject import SubjectInfo
 from app.schemas.task import Task
@@ -69,4 +70,19 @@ async def get_tasks(subject_id: str, authorization: str = Header(...)) -> JSONRe
     return JSONResponse(
         status_code=HTTPStatus.OK,
         content=serialized_tasks
+    )
+
+@router.get("/labs")
+async def get_user_labs(authorization: str = Header(...)) -> JSONResponse:
+    check_data = check_auth(authorization)
+    if isinstance(check_data, JSONResponse):
+        return check_data
+
+    user_labs = get_student_tasks_with_status(check_data['user_id'])
+
+    serialized_labs = [lab for lab in user_labs]
+
+    return JSONResponse(
+        status_code=HTTPStatus.OK,
+        content=serialized_labs
     )

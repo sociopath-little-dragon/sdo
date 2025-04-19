@@ -1,4 +1,3 @@
-# sdo project
 from uvicorn import run
 from fastapi import FastAPI, APIRouter
 from app.config.config import init_config
