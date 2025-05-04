@@ -1,6 +1,6 @@
 from typing import Union, Type, Any
 
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean, Float, func, case
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean, Float, func, case, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, InstrumentedAttribute
@@ -26,11 +26,18 @@ Session = sessionmaker(bind=engine)
 
 RoleTypeEnum = ENUM('admin', 'teacher', 'student', name='role', create_type=True)
 
-association_table = Table(
-    'UserHasSubject',
+# association_table = Table(
+#     'UserHasSubject',
+#     Base.metadata,
+#     Column('user_id', Integer, ForeignKey('User.id'), primary_key=True),
+#     Column('subject_id', Integer, ForeignKey('Subject.id'), primary_key=True)
+# )
+
+group_subject_table = Table(
+    'GroupHasSubject',
     Base.metadata,
-    Column('user_id', Integer, ForeignKey('User.id'), primary_key=True),
-    Column('subject_id', Integer, ForeignKey('Subject.id'), primary_key=True)
+    Column('group_id', Integer, ForeignKey('Group.id'), primary_key=True),
+    Column('subject_id', Integer, ForeignKey('Subject.id'), primary_key=True),
 )
 
 
@@ -72,6 +79,7 @@ class Group(Base):
     faculty_rel = relationship('Faculty', back_populates='groups')
     users = relationship('User', back_populates='group_rel')
     teacher_groups = relationship('TeacherHasGroups', back_populates='group')
+    subjects = relationship('Subject', secondary=group_subject_table, back_populates='groups')
 
 
 class User(Base):
@@ -91,7 +99,7 @@ class User(Base):
     teacher_groups = relationship("TeacherHasGroups", back_populates="user")
     group_rel = relationship('Group', back_populates='users')
     solutions = relationship('Solution', back_populates='user', cascade="all, delete-orphan")
-    subjects = relationship('Subject', secondary=association_table, back_populates='users')  # Исправлено
+    # subjects = relationship('Subject', secondary=association_table, back_populates='users')  # Исправлено
     subject_grades = relationship("UserSubjectGrade", order_by="UserSubjectGrade.id", back_populates="user")
 
 
@@ -106,8 +114,9 @@ class Subject(Base):
 
     # Relationships
     tasks = relationship('Task', back_populates='subject')
-    users = relationship('User', secondary=association_table, back_populates='subjects')  # Исправлено
+    # users = relationship('User', secondary=association_table, back_populates='subjects')  # Исправлено
     user_grades = relationship("UserSubjectGrade", order_by="UserSubjectGrade.id", back_populates="subject")
+    groups = relationship('Group', secondary=group_subject_table, back_populates='subjects')
 
 
 class UserSubjectGrade(Base):
@@ -328,15 +337,19 @@ def get_student_tasks_with_status(user_id: int) -> list[tuple[int, str, bool]]:
     """
     with Session() as session:
         # Получаем все subject_id, связанные с пользователем
-        student_subjects = session.query(association_table.c.subject_id) \
-            .filter(association_table.c.user_id == user_id) \
-            .all()
+        group_id = session.query(User.studyGroup).filter_by(id=user_id).scalar()
 
-        if not student_subjects:
+        if not group_id:
             return []
 
         # Извлекаем только subject_id из результатов запроса
-        subject_ids = [subj.subject_id for subj in student_subjects]
+        subject_ids = session.query(group_subject_table.c.subject_id) \
+            .filter(group_subject_table.c.group_id == group_id) \
+            .all()
+        subject_ids = [sid for (sid,) in subject_ids]
+
+        if not subject_ids:
+            return []
 
         # Получаем все задания, связанные с этими subject_id
         tasks = session.query(Task) \
@@ -351,6 +364,7 @@ def get_student_tasks_with_status(user_id: int) -> list[tuple[int, str, bool]]:
             result.append((task.id, task.name, completed))
 
         return result
+
 
 def get_student_labs_by_subject(student_id: int, subject_id: int) -> list[LabStatus]:
     """
@@ -493,6 +507,7 @@ def get_users_by_faculty(faculty_id: int) -> Union[list[UserInfo], str]:
 
         return users
 
+
 def get_groups() -> list[str]:
     with Session() as session:
         groups = session.query(Group).all()
@@ -502,6 +517,7 @@ def get_groups() -> list[str]:
                 result.append(group.name)
 
         return result
+
 
 def get_username_by_id(student_id: int) -> Union[str, None]:
     with Session() as session:
@@ -695,42 +711,78 @@ def add_user_test(username, password, role_type='student', study_group='', form_
             raise
 
 
-def reg_user_in_subject(user_id, subject_identifier):
-    """
-    Зачисляет пользователя на дисциплину по ID пользователя и ID или имени дисциплины.
+# def reg_user_in_subject(user_id, subject_identifier):
+#     """
+#     Зачисляет пользователя на дисциплину по ID пользователя и ID или имени дисциплины.
+#
+#     :param user_id: ID пользователя
+#     :param subject_identifier: ID или имя дисциплины
+#     :raises ValueError: Если пользователь или дисциплина не найдены
+#     """
+#     with Session() as session:
+#         try:
+#             # Проверяем, существует ли пользователь с таким user_id
+#             user = session.query(User).filter_by(id=user_id).first()
+#             if not user:
+#                 raise ValueError(f"User with ID {user_id} not found.")
+#
+#             # Если передан ID дисциплины
+#             if isinstance(subject_identifier, int):
+#                 subject = session.query(Subject).filter_by(id=subject_identifier).first()
+#             # Если передано имя дисциплины
+#             else:
+#                 subject = session.query(Subject).filter_by(name=subject_identifier).first()
+#
+#             if not subject:
+#                 raise ValueError(f"Subject with identifier '{subject_identifier}' not found.")
+#
+#             # Проверяем, не зачислен ли уже пользователь на эту дисциплину
+#             if subject in user.subjects:
+#                 raise ValueError(f"User with ID {user_id} is already enrolled in the subject '{subject.name}'.")
+#
+#             # Добавляем дисциплину в список предметов пользователя
+#             user.subjects.append(subject)
+#             session.commit()
+#
+#         except Exception as e:
+#             session.rollback()  # Откат транзакции в случае ошибки
+#             print(f"Error enrolling user {user_id} in subject {subject_identifier}: {e}")
+#             raise
 
-    :param user_id: ID пользователя
-    :param subject_identifier: ID или имя дисциплины
-    :raises ValueError: Если пользователь или дисциплина не найдены
+
+def reg_group_in_subject(group_id, subject_identifier):
     """
+#     Зачисляет группу на дисциплину по ID группы и ID или имени дисциплины.
+#
+#     :param user_id: ID пользователя
+#     :param subject_identifier: ID или имя дисциплины
+#     :raises ValueError: Если пользователь или дисциплина не найдены
+#     """
     with Session() as session:
         try:
-            # Проверяем, существует ли пользователь с таким user_id
-            user = session.query(User).filter_by(id=user_id).first()
-            if not user:
-                raise ValueError(f"User with ID {user_id} not found.")
+            # проверяем группу
+            group = session.query(Group).filter_by(id=group_id).first()
+            if not group:
+                raise ValueError(f"Group with ID {group_id} not found.")
 
-            # Если передан ID дисциплины
+            # поиск предмета по id или имени
             if isinstance(subject_identifier, int):
                 subject = session.query(Subject).filter_by(id=subject_identifier).first()
-            # Если передано имя дисциплины
             else:
                 subject = session.query(Subject).filter_by(name=subject_identifier).first()
-
             if not subject:
-                raise ValueError(f"Subject with identifier '{subject_identifier}' not found.")
+                raise ValueError(f"Subject '{subject_identifier}' not found.")
 
-            # Проверяем, не зачислен ли уже пользователь на эту дисциплину
-            if subject in user.subjects:
-                raise ValueError(f"User with ID {user_id} is already enrolled in the subject '{subject.name}'.")
+            # проверяем, что ещё не назначено
+            if subject in group.subjects:
+                raise ValueError(f"Group {group_id} already has subject '{subject.name}'.")
 
-            # Добавляем дисциплину в список предметов пользователя
-            user.subjects.append(subject)
+            # привязываем и сохраняем
+            group.subjects.append(subject)
             session.commit()
-
         except Exception as e:
-            session.rollback()  # Откат транзакции в случае ошибки
-            print(f"Error enrolling user {user_id} in subject {subject_identifier}: {e}")
+            session.rollback()
+            print(f"Error assigning subject to group: {e}")
             raise
 
 
@@ -749,9 +801,13 @@ def get_user_subjects(username: str) -> list[SubjectInfo]:
             if not user:
                 return list[SubjectInfo]()
 
+            group = session.query(Group).filter_by(id=user.studyGroup).first()
+            if not group:
+                return []
+
             # Возвращаем список всех дисциплин, на которые зачислен пользователь
             subjects = []
-            for subject in user.subjects:
+            for subject in group.subjects:
                 grade = session.query(UserSubjectGrade).filter_by(user_id=user.id, subject_id=subject.id).first()
                 subjects.append(SubjectInfo(id=subject.id, name=subject.name, grade=(grade.grade if grade else None)))
             return subjects
@@ -796,13 +852,15 @@ def add_solution(code, user_id, task_id, mark=None, length_test_result=None, for
     if not subject_id:
         return "Task not found."
 
-    # Проверка, прикреплен ли пользователь к предмету
+    # Проверка, что предмет назначен группе пользователя
     with Session() as session:
         user = session.query(User).filter_by(id=user_id).first()
         if not user:
             return "User not found."
-
-        if subject_id not in [subject.id for subject in user.subjects]:
+        group = session.query(Group).filter_by(id=user.studyGroup).first()
+        if not group:
+            return "User’s group not found."
+        if subject_id not in [subject.id for subject in group.subjects]:
             return "User is not enrolled in the subject."
 
     # Создание сессии
@@ -1025,7 +1083,7 @@ def is_user_enrolled_in_subject(username: str, subject_id: int) -> bool | str:
 
     :param username:
     :param subject_id: ID или имя предмета
-    :return: True, если пользователь зачислен на предмет, иначе False
+    :return: True, если пользователь зачислен на предмет, False или "User not found"
     """
     with Session() as session:
         try:
@@ -1033,12 +1091,12 @@ def is_user_enrolled_in_subject(username: str, subject_id: int) -> bool | str:
             if not user:
                 return "User not found"
 
-            user_subject_list = [sub.id for sub in user.subjects]
+            group = session.query(Group).filter_by(id=user.studyGroup).first()
+            if not group:
+                return False
 
-            if len(user_subject_list) == 0:
-                return "No subjects found"
-
-            return subject_id in user_subject_list
+            return any(subject.id == subject_id for subject in group.subjects)
+            # return subject_id in user_subject_list
 
         except Exception as e:
             return f"Error checking enrollment for user {username} in subject {subject_id}: {e}"
@@ -1211,8 +1269,9 @@ def get_users_by_subject(subject_id):
                 raise ValueError(f"Subject with ID {subject_id} not found.")
 
             # Получаем всех пользователей, зачисленных на данный предмет
-            users = subject.users  # Используем связь many-to-many, определенную в модели
-
+            users: list[User] = []
+            for group in subject.groups:
+                users.extend(group.users)
             return users  # Возвращаем список пользователей
         except Exception as e:
             print(f"Error retrieving users for subject {subject_id}: {e}")
@@ -1263,6 +1322,11 @@ def get_users():
 
 
 def delete_tables():
+    # with engine.begin() as conn:
+    #     # удаляем устаревшую таблицу, чтобы не было висящих FK
+    #     conn.execute(text('DROP TABLE IF EXISTS "UserHasSubject" CASCADE'))
+    #     # теперь чистим все таблицы, зарегистрированные в Base.metadata
+    #     Base.metadata.drop_all(bind=conn)
     Base.metadata.drop_all(engine)
 
 

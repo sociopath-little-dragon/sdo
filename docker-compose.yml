@@ -25,6 +25,24 @@ services:
     networks:
       - app-network
 
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"                         # Доступ к pgAdmin по http://localhost:8080
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin    # Для сохранения настроек между перезапусками
+    depends_on:
+      - db
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  pgadmin_data:
